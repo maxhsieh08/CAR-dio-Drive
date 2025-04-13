@@ -58,6 +58,6 @@ async function closeDB() {
     }
   }
 //getConnectionStats();
-connectDB().catch(console.dir);
+//connectDB().catch(console.dir);
 //closeDB();
 export { client, connectDB, closeDB };

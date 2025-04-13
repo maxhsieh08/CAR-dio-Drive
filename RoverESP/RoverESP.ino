@@ -16,8 +16,8 @@ effort receivedData;
 //Ports/Connections
 //Motor 1
 #define ENA 21 //Speed control pin (0, 255)
-#define IN1 20 //Backward
-#define IN2 10 //Forward
+#define IN1 20 //Forward
+#define IN2 10 //Backward
 //Motor 2
 #define ENB 3 //Speed control pin (0, 255)
 #define IN3 0 //Forward
@@ -36,10 +36,13 @@ void onReceive(const esp_now_recv_info_t *info, const uint8_t *data, int len) {
   if (len == sizeof(receivedData)) {
     memcpy(&receivedData, data, sizeof(receivedData));
     Serial.print("Received Effort: ");
+    Serial.print("Received Effort: ");
     Serial.println(receivedData.value);
   } else {
     Serial.println("Invalid data size.");
   }
+
+
 }
 
 void setup() {

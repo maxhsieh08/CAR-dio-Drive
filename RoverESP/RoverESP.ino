@@ -16,12 +16,15 @@ effort receivedData;
 //Ports/Connections
 //Motor 1
 #define ENA 21 //Speed control pin (0, 255)
-#define IN1 20 //Forward
-#define IN2 10 //Backward
+#define IN1 20 //Backward
+#define IN2 10 //Forward
 //Motor 2
 #define ENB 3 //Speed control pin (0, 255)
 #define IN3 0 //Forward
 #define IN4 1 //Backward
+
+int speed;
+double EffortLvl = 0;
 
 void stopAllMotors() {
   analogWrite(ENA, 0);
@@ -32,17 +35,17 @@ void stopAllMotors() {
   digitalWrite(IN4, LOW);
 }
 
-void onReceive(const esp_now_recv_info_t *info, const uint8_t *data, int len) {
-  if (len == sizeof(receivedData)) {
+ void onReceive(const esp_now_recv_info_t* info, const uint8_t* data, int len) {
+  if (len == sizeof(receivedData))
+  {
     memcpy(&receivedData, data, sizeof(receivedData));
     Serial.print("Received Effort: ");
-    Serial.print("Received Effort: ");
     Serial.println(receivedData.value);
+    EffortLvl = receivedData.value;
+
   } else {
     Serial.println("Invalid data size.");
   }
-
-
 }
 
 void setup() {
@@ -76,44 +79,47 @@ void setup() {
   // Register receive callback with the correct function signature
   esp_now_register_recv_cb(onReceive);
 
-
+  
 }
 
 void loop() {
-  if (timerStarted && timer.read() >= 30000 && !stopMotors) {
-    stopAllMotors();
-    stopMotors = true;
-    Serial.println("30 seconds elapsed. Rover stopped.");
-  }
+  // if (timerStarted && timer.read() >= 30000 && !stopMotors) {
+  //   stopAllMotors();
+  //   stopMotors = true;
+  //   Serial.println("30 seconds elapsed. Rover stopped.");
+  // }
 
   // Skip motor control if time is up
-  if (stopMotors) return;
+  // if (stopMotors) return;
 
-  int EffortLvl = receivedData.value;
-  int speed = 0;
-
-  if (EffortLvl < 0.15) {
+  if (EffortLvl < 0.1) {
     speed = 0;
-  } else if (EffortLvl >= 0.15 && EffortLvl <= 0.433) {
+  } else if (EffortLvl >= 0.1 && EffortLvl <= 0.35) {
     analogWrite(ENA, 150);
     analogWrite(ENB, 150);
     delay(100);
     speed = 80;
-  } else if (EffortLvl > 0.433 && EffortLvl <= 0.71633) {
+  } else if (EffortLvl > 0.35 && EffortLvl <= 0.6) {
     speed = 138.88;
-  } else if (EffortLvl > 0.71633){
+  } else if (EffortLvl > 0.6){
     speed = 255;
   }
+
+  Serial.println(EffortLvl);
+  Serial.print("speed: ");
+  Serial.println(speed);
+
 
   analogWrite(ENA, speed);
   analogWrite(ENB, speed);
 
   // Drive both motors forward
-  digitalWrite(IN1, LOW);
-  digitalWrite(IN2, HIGH);
-  digitalWrite(IN3, HIGH);
-  digitalWrite(IN4, LOW);
+  digitalWrite(IN1, HIGH);
+  digitalWrite(IN2, LOW);
+  digitalWrite(IN3, LOW);
+  digitalWrite(IN4, HIGH);
 
   delay(300);
 }
+
 

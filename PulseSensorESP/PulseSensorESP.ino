@@ -5,6 +5,10 @@
 
 //Constants
 #define N 10
+#include "EFFORT.h"
+
+//Constants
+#define N 10
 
 const int PulseWire = 0;       // PulseSensor PURPLE WIRE connected to ANALOG PIN 0
 const int LED = LED_BUILTIN;          // The on-board Arduino LED, close to PIN 13.
@@ -16,6 +20,11 @@ PulseSensorPlayground pulseSensor;  // Creates an instance of the PulseSensorPla
 
 //Wifi settings
 uint8_t receiverMAC[] = {0x34, 0xb7, 0xda, 0xf6, 0x41, 0x98};
+effort effortData;
+
+//Heart Calculations
+float maxHeartRate;
+float avgRestingRate;
 effort effortData;
 
 //Heart Calculations
@@ -38,6 +47,7 @@ void setup() {
 
   // Double-check the "pulseSensor" object was created and "began" seeing a signal. 
    if (pulseSensor.begin()) {
+    Serial.println("Started up successfully!\n");  //This prints one time at Arduino power-up,  or on Arduino reset.
     Serial.println("Started up successfully!\n");  //This prints one time at Arduino power-up,  or on Arduino reset.
   }
 
@@ -126,6 +136,68 @@ void setup() {
   delay(1000);
   Serial.println("Start!");
 
+
+  //Begin game and callibration
+  Serial.println("Calculating max heart rate. Please enter your age: ");
+  while (Serial.available() == 0) {
+    // Wait for input
+  }
+  int userAge = Serial.readStringUntil('\n').toInt();
+  Serial.print("You selected: ");
+  Serial.println(userAge);
+  Serial.println();
+
+  Serial.println("Please enter your sex (m/f): ");
+  while (Serial.available() == 0) {
+    // Wait for input
+  }
+  char sex = Serial.read();
+  Serial.print("You selected: ");
+
+  //Calculate max heart rate
+  if (sex == 'm') {
+    Serial.println("Male");
+    maxHeartRate = (203.7 / (1 + exp(0.033*(userAge-104.3))));
+  } else if (sex == 'f') {
+    Serial.println("Female");
+    maxHeartRate = (190.2 / (1 + exp(0.0453*(userAge-107.5))));
+  }
+  Serial.println();
+  delay(1000);
+
+  Serial.print("Max rate calculated as: ");
+  Serial.println(maxHeartRate);
+  Serial.println();
+
+  Serial.println("Make sure sensor is attached. Callibrating resting heart rate (10 seconds).");
+  delay(3000);
+  int sumBPM = 0;
+  int numOfSamples = 0;
+  for (int i = 0; i < 100; i++) {
+    if (pulseSensor.sawStartOfBeat()) {            // Constantly test to see if "a beat happened".
+      int signal = analogRead(PulseWire);
+      int newBPM = pulseSensor.getBeatsPerMinute();
+      numOfSamples++;
+      sumBPM = newBPM + sumBPM;
+      Serial.println(newBPM);
+    }
+    delay(100);
+  }
+  avgRestingRate = sumBPM/numOfSamples;
+  Serial.print("Resting rate calculated as: " );
+  Serial.println(avgRestingRate);
+  Serial.println();
+
+  Serial.print("Starting in...");
+  delay(1000);
+  Serial.print("3..");
+  delay(1000);
+  Serial.print("2..");
+  delay(1000);
+  Serial.print("1..");
+  delay(1000);
+  Serial.println("Start!");
+
 }
 
 
@@ -144,11 +216,26 @@ void loop() {
     }
 
     effortData.value = effort;
+    //int signal = analogRead(PulseWire);
+    int myBPM = pulseSensor.getBeatsPerMinute();
+
+    double effort = 0.0;
+    effort = (myBPM - avgRestingRate) / (maxHeartRate - avgRestingRate);
+    if (effort < 0.0) {
+      effort = 0.0;
+    } else if (effort > 1.0) {
+      effort = 1.0;
+    }
+
+    effortData.value = effort;
   }
 
   //Send data
   esp_err_t result = esp_now_send(receiverMAC, (uint8_t*)&effortData, sizeof(effortData));
+  esp_err_t result = esp_now_send(receiverMAC, (uint8_t*)&effortData, sizeof(effortData));
   if (result == ESP_OK) {
+    Serial.println("Sent Effort: ");
+    Serial.println(effortData.value);
     Serial.println("Sent Effort: ");
     Serial.println(effortData.value);
   } else {
